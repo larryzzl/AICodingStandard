@@ -34,6 +34,11 @@ Every functional screen or independent business unit must implement the standard
 1. **Immutable State**: `State` must be a completely immutable data class or struct. Modifying the state must be achieved only by creating a new copy (e.g., using Kotlin’s `copy()` or Swift’s `updating()` extensions).
 2. **Intent-Driven**: All user actions and event triggers from the View to the ViewModel must be encapsulated into a single unified `Intent` sealed class/enum (e.g., `SendOtpIntent`, `RetryFetchIntent`) and dispatched through a single entry-point method (e.g., `process(intent)`).
 3. **Single-Time Side Effects (Effects/Events)**: One-off UI behaviors such as dialog popups, navigation, or toasts must not pollute the persistent `State`. They must be emitted and consumed via single-pass event streams (e.g., Kotlin `SharedFlow`/`Channel` or Swift `PassthroughSubject`).
+4. **Declarative UI State Hoisting & Preview Isolation**:
+   - **Stateless Views/Composables**: Child views must be kept stateless by hoisting state up to parent containers or the ViewModel. They should receive data via immutable state properties and bubble actions back up using lambda callbacks or closures.
+   - **ViewModel Preview Isolation**: Never pass parent `ViewModel` or `Coordinator` instances directly into child or reusable UI components. UI components must accept only localized state models and action lambdas/closures to ensure they can be previewed (e.g., Compose Previews, SwiftUI Previews) and tested in isolation.
+   - **Side-Effect Boundary**: Do not trigger business operations or side effects directly within the UI rendering cycle. Any lifecycle-triggered tasks must be bound to native declarative scopes (e.g., `LaunchedEffect` in Compose, `.task` / `.onAppear` in SwiftUI).
+   - **List Recomposition & Keying**: When displaying dynamic collections (e.g., in a lazy list or grid), stable, unique keys must be explicitly provided for each item (e.g., `key = { item.id }` in Jetpack Compose or `ForEach(items, id: \.id)` in SwiftUI). This prevents unnecessary recompositions/re-renders of the entire list.
 
 ## 3. Module Decoupling and Routing Mechanism
 
@@ -46,6 +51,10 @@ Every functional screen or independent business unit must implement the standard
 - **Unified Error Mapping**: Raw OkHttp errors, SocketTimeout exceptions, or raw `HTTP 500` status codes must never be thrown directly to the Domain or UI layers. The Data Layer must intercept and map them into domain-level exceptions (e.g., `NetworkException.NoConnection`, `NetworkException.ServerMaintenance`).
 - **Seamless Token Auto-Refresh**: Intercept `401 Unauthorized` errors inside a network interceptor, pause pending requests, fetch a new Access Token using the Refresh Token, and automatically replay the original request transparently without exposing this flow to the upper business layers.
 - **Lifecycle Binding**: All network requests (Coroutines Flow/Task/Combine) must be bound to the caller's lifecycle scope (e.g., `viewModelScope`). When a View is destroyed, a ViewModel is cleared, or a page is closed, all corresponding pending requests must be cancelled immediately to prevent memory leaks.
+- **Secure Local Storage & Cryptography**: All sensitive authentication tokens (Access, Refresh, ID tokens), credentials, and Personally Identifiable Information (PII) must be stored exclusively in native secure containers (Keychain for iOS, EncryptedSharedPreferences / KeyStore for Android). If databases (e.g., Room, SQLite) store sensitive cached data, they must be encrypted at rest (e.g., utilizing SQLCipher).
+- **DTO to Domain Entity Isolation**: Remote API data models (DTOs) must never leak beyond the Data Layer. The Repository must map network DTOs to pure, UI-agnostic Domain Entities before delivering them to the Domain Layer.
+- **Mandatory Pagination & Optimization**: All list-retrieval remote endpoints must use pagination (cursor-based or offset-based). Repositories must enforce query limits, and ViewModels must manage current pages gracefully to prevent high memory usage.
+- **Structured Async Exception Boundaries**: All asynchronous execution blocks must enforce strict error-boundary policies. Kotlin Coroutines must utilize a `CoroutineExceptionHandler` or map results to monadic `Result` wraps. Swift Tasks must handle potential exceptions via explicit `try/catch` scopes to guarantee the app never silently crashes from unhandled async exceptions.
 
 ## 5. Absolutely Prohibited Practices (Zero-Tolerance Red Lines)
 
@@ -68,12 +77,25 @@ To ensure application stability, security, and performance, the following practi
 - **No Feature-to-Feature Static Global Singletons**: Cross-module states must have their lifecycles and scopes strictly managed by the DI container (Scoped DI) to ensure proper memory reclamation.
 - **No Platform UI Framework & Context Leaks**: Passing platform-specific context or UI objects (such as Android `Context`, `View`, `Intent` or iOS `UIView`, `SwiftUI.View`) into the Domain or Data Layers is strictly prohibited. This prevents memory leaks and preserves platform-agnostic business logic.
 
+### D. Security & Data Storage Red Lines
+
+- **No Plaintext Token or PII Storage**: Storing sensitive tokens (Auth tokens, Refresh tokens), passwords, or PII in plaintext in unprotected local database tables, standard Shared Preferences, or standard User Defaults is strictly prohibited. Logs cannot contain any PII data or auth information.
+- **No ViewModel Leakage in Sub-components**: Passing ViewModel or Router instances directly to child Views, Composables, or cells is strictly prohibited.
+- **No Unprotected Sensitive Input Fields**: Inputting sensitive credentials (passwords, PINs, bank details) without disabling OS keyboard dictionary caching is strictly prohibited.
+- **No Background Exposure of Sensitive Screens**: High-security screens (authentication, checkout, identity verification) must implement screen masking (e.g., `FLAG_SECURE` on Android, view blurring inside `sceneWillResignActive` on iOS) to prevent OS multitasking previews, screenshots, or screen recordings from leaking sensitive data.
+- **No Weak Biometric Session Keys**: Securing local data session accesses via biometrics without binding them to a hardware-backed cryptographic key (e.g., Android Keystore, iOS Keychain) that invalidates upon new biometric enrollment is strictly prohibited.
+
+### E. Dependency Injection Red Lines
+
+- **No Direct Service Locator References**: Referencing the DI container directly inside Views or ViewModels to resolve dependencies dynamically (e.g., using `KoinJavaComponent.get()` or a global `ServiceLocator.resolve()` dynamically) is prohibited. Constructor injection must be utilized to declare all required dependencies explicitly.
+
 ## 6. Performance, Power, and Telemetry Monitoring Specifications
 
 ### Performance & Power Optimization
 
 - **Lazy Initialization**: Initialization of heavyweight SDKs and intensive resource loading must be executed lazily on background threads, ensuring they never block the application startup path.
 - **Image & Memory Management**: Images rendered in lists must utilize an image loader equipped with LRU caching and auto-downsampling capabilities. Direct loading of raw, high-resolution source images into memory is strictly prohibited.
+- **Stateless Design System Abstractions**: All shared UI components in the `Core` layer must be entirely decoupling-oriented (stateless). They are strictly forbidden from executing business logic, containing dependencies, navigating to features, or reading global application states. They must only render primitives and notify via closures.
 
 ### Telemetry Isolation (Zero Vendor Lock-in)
 
