@@ -2,8 +2,8 @@
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
-<!-- reason: Clarifies that this file governs agent behavior while stack-specific rule files govern implementation constraints. -->
-This file controls agent behavior. Stack-specific rule files control implementation constraints. Both must be followed.
+<!-- reason: Clarifies that this file governs agent behavior while keeping the expected rule-file naming discoverable for agents. -->
+This file controls agent behavior. Stack-specific rule files, commonly named `RULES.md`, control implementation constraints. Both must be followed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
@@ -13,7 +13,7 @@ This file controls agent behavior. Stack-specific rule files control implementat
 Follow instructions in this order:
 
 1. User's current request.
-2. Project-specific rule files.
+2. Project-specific rule files, commonly named `RULES.md`.
 3. This behavioral guideline.
 4. Existing code style and conventions.
 
@@ -22,9 +22,10 @@ If instructions conflict, stop and explain the conflict before editing code.
 
 ## 1. Repository Discovery
 
-<!-- reason: Coding agents often start from generic patterns; this forces repository discovery before implementation choices. -->
+<!-- reason: Naming the expected rule file makes discovery reliable while still allowing each stack to define its own constraints. -->
 Before coding in this project:
-- Read the relevant stack-specific rule file when the task touches architecture, networking, storage, security, dependency injection, UI state, or tests.
+- Read the relevant stack-specific rule file, commonly named `RULES.md`, when the task touches architecture, data flow, integration boundaries, security, platform behavior, or tests.
+- Prefer the nearest applicable rule file to the files being changed.
 - Inspect nearby existing code before choosing patterns.
 - Prefer existing project conventions over generic best practices.
 
