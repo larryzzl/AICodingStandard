@@ -120,3 +120,15 @@ monitoringService.logException(networkException)
 1. **Domain Layer**: All UseCases/Interactors must achieve **100% unit test coverage**.
 2. **Data Layer**: All Repositories and Error Mappers must be covered by comprehensive unit tests.
 3. **Presentation Layer**: State transition logic and Side-Effect emissions within the ViewModel must achieve **100% unit test coverage**.
+
+## 9. Implementation Checklist
+
+<!-- reason: This mobile-specific checklist belongs with architecture and safety rules, not with generic agent behavior instructions. -->
+Before and after mobile implementation changes, verify:
+- Layer direction is preserved.
+- UI remains stateless where required.
+- ViewModels expose immutable state and one-off effects separately.
+- DTOs do not leak outside Data.
+- Async work is lifecycle-bound.
+- Sensitive data is not logged or stored insecurely.
+- User-facing strings are localized.

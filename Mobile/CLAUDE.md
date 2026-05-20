@@ -2,19 +2,45 @@
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
+<!-- reason: Clarifies that this file governs agent behavior while stack-specific rule files govern implementation constraints. -->
+This file controls agent behavior. Stack-specific rule files control implementation constraints. Both must be followed.
+
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-## 1. Think Before Coding
+## 0. Instruction Priority
+
+<!-- reason: Agents need a deterministic priority order when user requests, architecture rules, and local style appear to conflict. -->
+Follow instructions in this order:
+
+1. User's current request.
+2. Project-specific rule files.
+3. This behavioral guideline.
+4. Existing code style and conventions.
+
+<!-- reason: Conflict handling should happen before code edits, not after an incorrect implementation. -->
+If instructions conflict, stop and explain the conflict before editing code.
+
+## 1. Repository Discovery
+
+<!-- reason: Coding agents often start from generic patterns; this forces repository discovery before implementation choices. -->
+Before coding in this project:
+- Read the relevant stack-specific rule file when the task touches architecture, networking, storage, security, dependency injection, UI state, or tests.
+- Inspect nearby existing code before choosing patterns.
+- Prefer existing project conventions over generic best practices.
+
+## 2. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
 Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
+- State your assumptions explicitly.
 - If multiple interpretations exist, present them - don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+<!-- reason: This keeps clarification behavior useful without causing unnecessary user interruptions. -->
+- If uncertainty can be resolved by reading code, configs, tests, or docs in the repo, inspect them first.
+- Ask the user only when the requirement has multiple product-level meanings, the change could affect public API, data model, security, or architecture, or proceeding would require guessing business behavior.
 
-## 2. Simplicity First
+## 3. Simplicity First
 
 **Minimum code that solves the problem. Nothing speculative.**
 
@@ -26,7 +52,7 @@ Before implementing:
 
 Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-## 3. Surgical Changes
+## 4. Surgical Changes
 
 **Touch only what you must. Clean up only your own mess.**
 
@@ -42,7 +68,24 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
-## 4. Goal-Driven Execution
+<!-- reason: Diff discipline prevents agents from mixing requested work with unrelated cleanup or formatting churn. -->
+Do not:
+- Reformat entire files unless formatting is the task.
+- Rename public symbols unless necessary.
+- Change generated files manually.
+- Modify lockfiles unless dependencies changed.
+- Mix unrelated cleanup with feature or bug-fix work.
+
+## 5. Rule Violation Handling
+
+<!-- reason: Project-specific rule violations should be surfaced before implementation, not hidden inside generated code. -->
+If the requested implementation appears to violate a project-specific rule file:
+- Do not implement the violating approach silently.
+- Explain the violated rule.
+- Propose the smallest compliant alternative.
+- Continue only with a compliant implementation or explicit user direction.
+
+## 6. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
 
@@ -59,6 +102,13 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+<!-- reason: Verification expectations make the agent prove the change and report limits when proof is unavailable. -->
+After changes:
+- Run the narrowest relevant tests first.
+- If tests cannot be run, explain why and state what was verified manually.
+- Summarize changed files and behavior, not implementation trivia.
+- Mention any remaining risk or follow-up only if it matters.
 
 ---
 
