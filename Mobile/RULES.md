@@ -115,16 +115,80 @@ monitoringService.logException(networkException)
 - **Dynamic Environment Configuration**: Configuration files must be split strictly into two sets: `config-nonprod.json` (for Integration, QA, and Staging) and `config-prod.json` (for Production). These must be dynamically injected during compilation via Gradle Tasks or Xcode Schemes. Manual, hardcoded environment switching is forbidden.
 - **100% Localization**: Hardcoding user-facing text literals inside UI components is strictly prohibited. All localized copy must be retrieved dynamically from localized resource files (e.g., Android's `strings.xml` or iOS's `Localizable.strings`).
 
-## 8. TDD Test Coverage Standards
+## 8. Design System, Theme, Accessibility, and UI Automation
+
+### 8.1 Dynamic Design Tokens
+
+- All UI styling must be consumed through semantic design tokens.
+- Raw colors, font sizes, spacing, radius, shadows, and asset names must not be hardcoded in feature UI.
+- Tokens must support embedded defaults, remote overrides, local caching, schema versioning, validation, and fallback.
+- Remote token loading must not block app startup.
+- Invalid remote tokens must fall back to the latest valid cached token set or embedded defaults.
+- Feature modules must not fetch or parse theme tokens directly. Token loading must be handled by the design system service/repository.
+- Runtime token changes must be propagated through an injected ThemeProvider / ThemeStore / Environment object, not through static globals.
+
+### 8.2 Light, Dark, and High-Contrast Modes
+
+- All semantic color tokens must define light and dark values.
+- Components must consume semantic tokens, not raw palette values.
+- The design system layer is responsible for resolving token values based on system appearance, user preference, partner configuration, and accessibility settings.
+- Shared components and critical screens must be verified in light mode, dark mode, and large text mode.
+
+### 8.3 Accessibility
+
+- All interactive controls must expose meaningful accessibility labels.
+- Decorative images must be hidden from accessibility services.
+- Informational images must provide localized accessibility descriptions.
+- Custom controls must expose proper accessibility roles/traits.
+- Text must support Dynamic Type / font scaling.
+- Layouts must remain usable under large accessibility text sizes.
+- Color must not be the only signal for status, validation, or errors.
+- Error, loading, empty, disabled, and success states must be accessible.
+- Sensitive information must not be unnecessarily exposed through accessibility labels.
+
+### 8.4 UI Automation Testability
+
+- All key UI elements must expose stable automation identifiers.
+- Automation identifiers must not be generated from localized visible text.
+- Automation identifiers must not contain PII, tokens, account numbers, phone numbers, or user-specific sensitive data.
+- Reusable UI components must allow parent features to provide automation identifiers.
+- Dynamic lists must use stable unique keys and stable automation identifiers.
+- Automation identifiers should follow a consistent convention:
+  `<feature>.<screen>.<element>.<state?>`.
+
+### 8.5 Shared UI Component Contract
+
+Shared UI components may receive:
+
+- Immutable display state.
+- Semantic design tokens.
+- Localized text or localization keys.
+- Accessibility metadata.
+- Automation identifiers.
+- Event callbacks.
+
+Shared UI components must not:
+
+- Call network APIs.
+- Access repositories.
+- Resolve dependencies from DI containers.
+- Navigate directly to feature modules.
+- Read global session state.
+- Log analytics directly.
+- Own business state.
+
+## 9. TDD Test Coverage Standards
 
 1. **Domain Layer**: All UseCases/Interactors must achieve **100% unit test coverage**.
 2. **Data Layer**: All Repositories and Error Mappers must be covered by comprehensive unit tests.
 3. **Presentation Layer**: State transition logic and Side-Effect emissions within the ViewModel must achieve **100% unit test coverage**.
 
-## 9. Implementation Checklist
+## 10. Implementation Checklist
 
 <!-- reason: This mobile-specific checklist belongs with architecture and safety rules, not with generic agent behavior instructions. -->
+
 Before and after mobile implementation changes, verify:
+
 - Layer direction is preserved.
 - UI remains stateless where required.
 - ViewModels expose immutable state and one-off effects separately.
