@@ -121,10 +121,6 @@ monitoringService.logException(networkException)
 
 - All UI styling must be consumed through semantic design tokens.
 - Raw colors, font sizes, spacing, radius, shadows, and asset names must not be hardcoded in feature UI.
-- Tokens must support embedded defaults, remote overrides, local caching, schema versioning, validation, and fallback.
-- Remote token loading must not block app startup.
-- Invalid remote tokens must fall back to the latest valid cached token set or embedded defaults.
-- Feature modules must not fetch or parse theme tokens directly. Token loading must be handled by the design system service/repository.
 - Runtime token changes must be propagated through an injected ThemeProvider / ThemeStore / Environment object, not through static globals.
 
 ### 8.2 Light, Dark, and High-Contrast Modes
